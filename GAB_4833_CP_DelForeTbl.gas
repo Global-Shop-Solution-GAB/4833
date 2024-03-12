@@ -1,0 +1,74 @@
+Program.Sub.ScreenSU.Start
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+V.Local.sSql.Declare(String)
+V.Local.sJob.Declare(String)
+V.Local.sFile.Declare(String)
+V.Local.bFile.Declare(Boolean)
+V.Local.bTable.Declare(Boolean)
+
+'Remove forecast.txt
+F.Intrinsic.String.Build("{0}\forecast.txt",V.Caller.FilesDir,V.Local.sFile)
+F.Intrinsic.File.Exists(V.Local.sFile,V.Local.bFile)
+F.Intrinsic.Control.If(V.Local.bFile,=,True)
+	F.Intrinsic.File.DeleteFile(V.Local.sFile)
+F.Intrinsic.Control.EndIf
+
+F.ODBC.Connection!Conx.OpenConnection(V.Ambient.PDSN,V.Ambient.PUser,V.Ambient.PPass,7200)
+
+F.ODBC.Connection!Conx.OpenLocalRecordsetRO("rstDelJobSch","Select JOB, SUFFIX FROM FORECAST_HEADER;")
+F.Intrinsic.Control.DoUntil(V.ODBC.Conx!rstDelJobSch.EOF,=,"True")
+	V.Local.sJob.Set(V.ODBC.Conx!rstDelJobSch.FieldVal!JOB)
+	F.Intrinsic.Control.If(V.Local.sJob,<>,"")
+		F.Intrinsic.String.Build("DELETE from SCHED_WO_SUPP WHERE WO='{0}'",V.Local.sJob,V.Local.sSql)
+		F.ODBC.Connection!Conx.Execute(V.Local.sSql)
+	F.Intrinsic.Control.EndIf
+	F.ODBC.Conx!rstDelJobSch.MoveNext
+F.Intrinsic.Control.Loop
+
+F.ODBC.Connection!Conx.Execute("DELETE FROM FORECAST;")
+F.ODBC.Connection!Conx.Execute("DELETE FROM FORECAST_COMMENTS;")
+F.ODBC.Connection!Conx.Execute("DELETE FROM FORECAST_DETAIL;")
+F.ODBC.Connection!Conx.Execute("DELETE FROM FORECAST_HEADER;")
+F.ODBC.Connection!Conx.Execute("DELETE FROM FORECAST_HISTORY;")
+F.ODBC.Connection!Conx.Execute("DELETE FROM FORECAST_IMPORT_HDR;")
+F.ODBC.Connection!Conx.Execute("DELETE FROM FORECAST_IMPORT_LINE;")
+F.ODBC.Connection!Conx.Execute("DELETE FROM FORECAST_OPS;")
+F.ODBC.Connection!Conx.Execute("DELETE FROM FORECAST_REQ;")
+F.ODBC.Connection!Conx.Execute("DELETE FROM FORECAST_SUMMARY;")
+F.ODBC.Connection!Conx.Execute("DELETE FROM FORECAST_XREF;")
+'F.ODBC.Connection!Conx.Execute("DELETE FROM APSV3_JBLINES WHERE JOB LIKE 'F%';")
+'F.ODBC.Connection!Conx.Execute("DELETE FROM APSV3_JBMASTER WHERE JOB LIKE 'F%';")
+'F.ODBC.Connection!Conx.Execute("DELETE FROM APSV3_UBDETAIL WHERE JOB LIKE 'F%';")
+F.ODBC.Connection!Conx.Execute("Delete APSV3_JBLINES From APSV3_JBLINES inner join APSV3_JBMASTER on APSV3_JBLINES.JS = APSV3_JBMASTER.JS and APSV3_JBMASTER.JobType=2;")
+F.ODBC.Connection!Conx.Execute("Delete APSV3_UBDETAIL From APSV3_UBDETAIL inner join APSV3_JBMASTER on APSV3_UBDETAIL.JS = APSV3_JBMASTER.JS and APSV3_JBMASTER.JobType=2;")
+F.ODBC.Connection!Conx.Execute("Delete From APSV3_JBMASTER where JobType=2;")
+
+F.ODBC.Connection!Conx.Execute("UPDATE OP_HEADER SET ASCII_FLAG = 'F' WHERE ID = '360020';")
+F.ODBC.Connection!Conx.Execute("UPDATE OP_HEADER SET TEXT1 = 'F' WHERE ID = '360020';")
+F.ODBC.Connection!Conx.Execute("UPDATE OP_HEADER SET F_NUMERIC = 1 WHERE ID = '360020';")
+
+F.ODBC.Connection!Conx.TableExists("FORECAST_SUPP",V.Local.bTable)
+F.Intrinsic.Control.If(V.Local.bTable,=,True)
+	F.ODBC.Connection!Conx.Execute("DELETE FROM FORECAST_SUPP")
+F.Intrinsic.Control.EndIf
+
+'Check and delete a BOM loop records
+F.ODBC.Connection!Conx.Execute("DELETE FROM BOM_MSTR WHERE PART = PARENT AND SEQUENCE_BOM <> '0000'")
+
+'Remove GAB_6725FC_{1}.txt
+F.Intrinsic.String.Build("{0}\GAB_6725FC_{1}.txt",V.Caller.FilesDir,V.Caller.CompanyCode,V.Local.sFile)
+F.Intrinsic.File.Exists(V.Local.sFile,V.Local.bFile)
+F.Intrinsic.Control.If(V.Local.bFile,=,True)
+	F.Intrinsic.File.DeleteFile(V.Local.sFile)
+F.Intrinsic.Control.EndIf
+
+F.ODBC.Connection!Conx.Close
+Program.Sub.Main.End
+
+Program.Sub.Comments.Start
+Program.Sub.Comments.End
